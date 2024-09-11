@@ -9,32 +9,27 @@
       :rules="dataRule"
       ref="dataForm"
       @keyup.enter.native="dataFormSubmit()"
-      label-width="80px"
+      label-width="140px"
     >
-      <el-form
-        :model="dataForm"
-        :rules="dataRule"
-        ref="dataForm"
-        @keyup.enter.native="dataFormSubmit()"
-        label-width="140px"
-      ></el-form>
       <el-form-item label="品牌名" prop="name">
         <el-input v-model="dataForm.name" placeholder="品牌名"></el-input>
       </el-form-item>
-
       <el-form-item label="品牌logo地址" prop="logo">
-        <el-input v-model="dataForm.logo" placeholder="品牌logo地址"></el-input>
+        <!-- <el-input v-model="dataForm.logo" placeholder="品牌logo地址"></el-input> -->
+        <single-upload v-model="dataForm.logo"></single-upload>
       </el-form-item>
       <el-form-item label="介绍" prop="descript">
         <el-input v-model="dataForm.descript" placeholder="介绍"></el-input>
       </el-form-item>
-
-      <el-form-item label="显示状态[0-不显示；1-显示]" prop="showStatus">
-        <el-input
+      <el-form-item label="显示状态" prop="showStatus">
+        <el-switch
           v-model="dataForm.showStatus"
           active-color="#13ce66"
           inactive-color="#ff4949"
-        ></el-input>
+          :active-value="1"
+          :inactive-value="0"
+        >
+        </el-switch>
       </el-form-item>
       <el-form-item label="检索首字母" prop="firstLetter">
         <el-input
@@ -43,7 +38,7 @@
         ></el-input>
       </el-form-item>
       <el-form-item label="排序" prop="sort">
-        <el-input v-model="dataForm.sort" placeholder="排序"></el-input>
+        <el-input v-model.number="dataForm.sort" placeholder="排序"></el-input>
       </el-form-item>
     </el-form>
     <span slot="footer" class="dialog-footer">
@@ -54,18 +49,10 @@
 </template>
 
 <script>
-// 解决 @vue/runtime-dom missing 问题
-import Vue from "vue";
-import { Dialog, Form, FormItem, Input, Button, Message } from "element-ui";
-
-Vue.use(Dialog);
-Vue.use(Form);
-Vue.use(FormItem);
-Vue.use(Input);
-Vue.use(Button);
-Vue.prototype.$message = Message;
+import SingleUpload from "@/components/upload/singleUpload";
 
 export default {
+  components: { SingleUpload },
   data() {
     return {
       visible: false,
@@ -76,7 +63,7 @@ export default {
         descript: "",
         showStatus: "",
         firstLetter: "",
-        sort: ""
+        sort: "" // 可以定义默认值为0
       },
       dataRule: {
         name: [{ required: true, message: "品牌名不能为空", trigger: "blur" }],
@@ -94,9 +81,33 @@ export default {
           }
         ],
         firstLetter: [
-          { required: true, message: "检索首字母不能为空", trigger: "blur" }
+          {
+            validator: (rule, value, callback) => {
+              if (value == "") {
+                callback(new Error("检索首字母不能为空"));
+              } else if (!/^[a-zA-Z]$/.test(value)) {
+                callback(new Error("检索首字母必须是a-z或A-Z之间"));
+              } else {
+                callback();
+              }
+            },
+            trigger: "blur"
+          }
         ],
-        sort: [{ required: true, message: "排序不能为空", trigger: "blur" }]
+        sort: [
+          {
+            validator: (rule, value, callback) => {
+              if (value == "") {
+                callback(new Error("排除不能为空"));
+              } else if (!Number.isInteger(value) || value < 0) {
+                callback(new Error("排除必须是一个大于等于0的整数"));
+              } else {
+                callback();
+              }
+            },
+            trigger: "blur"
+          }
+        ]
       }
     };
   },
@@ -132,9 +143,7 @@ export default {
         if (valid) {
           this.$http({
             url: this.$http.adornUrl(
-              `/gulimallproduct/brand/${
-                !this.dataForm.brandId ? "save" : "update"
-              }`
+              `/product/brand/${!this.dataForm.brandId ? "save" : "update"}`
             ),
             method: "post",
             data: this.$http.adornData({
